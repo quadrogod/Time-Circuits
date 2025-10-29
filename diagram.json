@@ -1,0 +1,215 @@
+{
+  "version": 1,
+  "author": "Alex Molchanov",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "wokwi-arduino-uno", "id": "uno", "top": 48.6, "left": -0.6, "attrs": {} },
+    {
+      "type": "wokwi-7segment",
+      "id": "sevseg1",
+      "top": 399.42,
+      "left": 193.12,
+      "attrs": { "digits": "4", "color": "red" }
+    },
+    {
+      "type": "wokwi-7segment",
+      "id": "sevseg2",
+      "top": 399.42,
+      "left": 77.36,
+      "attrs": { "digits": "2", "colon": "", "color": "red" }
+    },
+    {
+      "type": "wokwi-7segment",
+      "id": "sevseg3",
+      "top": 399.42,
+      "left": 451.76,
+      "attrs": { "digits": "2", "colon": "", "color": "red" }
+    },
+    {
+      "type": "wokwi-7segment",
+      "id": "sevseg4",
+      "top": 399.42,
+      "left": 576.56,
+      "attrs": { "digits": "2", "colon": "", "color": "red" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led2",
+      "top": 390,
+      "left": 397.4,
+      "attrs": { "color": "orange" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led3",
+      "top": 428.4,
+      "left": 397.4,
+      "attrs": { "color": "orange" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led4",
+      "top": 390,
+      "left": 541.4,
+      "attrs": { "color": "orange" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led5",
+      "top": 428.4,
+      "left": 541.4,
+      "attrs": { "color": "orange" }
+    },
+    {
+      "type": "wokwi-7segment",
+      "id": "sevseg5",
+      "top": 399.42,
+      "left": -133.28,
+      "attrs": { "digits": "4", "color": "red" }
+    },
+    {
+      "type": "wokwi-membrane-keypad",
+      "id": "keypad1",
+      "top": 391.6,
+      "left": -426.4,
+      "attrs": { "keys": ["1","2","3","D","4","5","6","P","7","8","9","L","R","0","#","E"]}
+    },
+    {
+      "type": "wokwi-ntc-temperature-sensor",
+      "id": "ntc1",
+      "top": 309.8,
+      "left": -307.8,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-7segment",
+      "id": "sevseg6",
+      "top": 505.02,
+      "left": -133.28,
+      "attrs": { "digits": "4", "color": "#00ff00" }
+    },
+    {
+      "type": "wokwi-7segment",
+      "id": "sevseg7",
+      "top": 505.02,
+      "left": 77.36,
+      "attrs": { "digits": "2", "colon": "", "color": "#00ff00" }
+    },
+    {
+      "type": "wokwi-7segment",
+      "id": "sevseg8",
+      "top": 505.02,
+      "left": 193.12,
+      "attrs": { "digits": "4", "color": "#00ff00" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led6",
+      "top": 495.6,
+      "left": 397.4,
+      "attrs": { "color": "orange" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led7",
+      "top": 534,
+      "left": 397.4,
+      "attrs": { "color": "orange" }
+    },
+    {
+      "type": "wokwi-7segment",
+      "id": "sevseg9",
+      "top": 505.02,
+      "left": 451.76,
+      "attrs": { "digits": "2", "colon": "", "color": "#00ff00" }
+    },
+    {
+      "type": "wokwi-7segment",
+      "id": "sevseg10",
+      "top": 505.02,
+      "left": 576.56,
+      "attrs": { "digits": "2", "colon": "", "color": "#00ff00" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led8",
+      "top": 495.6,
+      "left": 541.4,
+      "attrs": { "color": "orange" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led9",
+      "top": 534,
+      "left": 541.4,
+      "attrs": { "color": "orange" }
+    },
+    {
+      "type": "wokwi-7segment",
+      "id": "sevseg11",
+      "top": 610.62,
+      "left": 77.36,
+      "attrs": { "digits": "2", "colon": "", "color": "yellow" }
+    },
+    {
+      "type": "wokwi-7segment",
+      "id": "sevseg12",
+      "top": 610.62,
+      "left": -133.28,
+      "attrs": { "digits": "4", "color": "yellow" }
+    },
+    {
+      "type": "wokwi-7segment",
+      "id": "sevseg13",
+      "top": 610.62,
+      "left": 193.12,
+      "attrs": { "digits": "4", "color": "yellow" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led10",
+      "top": 601.2,
+      "left": 397.4,
+      "attrs": { "color": "orange" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led11",
+      "top": 639.6,
+      "left": 397.4,
+      "attrs": { "color": "orange" }
+    },
+    {
+      "type": "wokwi-7segment",
+      "id": "sevseg14",
+      "top": 610.62,
+      "left": 451.76,
+      "attrs": { "digits": "2", "colon": "", "color": "yellow" }
+    },
+    {
+      "type": "wokwi-7segment",
+      "id": "sevseg15",
+      "top": 610.62,
+      "left": 576.56,
+      "attrs": { "digits": "2", "colon": "", "color": "yellow" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led12",
+      "top": 601.2,
+      "left": 541.4,
+      "attrs": { "color": "orange" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led13",
+      "top": 639.6,
+      "left": 541.4,
+      "attrs": { "color": "orange" }
+    }
+  ],
+  "connections": [
+  
+  ],
+  "dependencies": {}
+}
