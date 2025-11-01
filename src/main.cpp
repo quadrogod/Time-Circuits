@@ -1,9 +1,9 @@
 /*****************************************************************
   Time-Circuits 15×7-Segment (Arduino Mega 2560 + 8×74HC595)
 
-  Destination (sevseg1..5, RED)
-  Present     (sevseg6..10, GREEN)
-  Last        (sevseg11..15, YELLOW: порядок MM DD YYYY HH MM)
+  Destination (sevseg1..5, RED) - месяц буквами
+  Present     (sevseg6..10, GREEN) - месяц буквами
+  Last        (sevseg11..15, YELLOW) - месяц буквами
 *****************************************************************/
 
 #include <Arduino.h>
@@ -47,30 +47,18 @@ Keypad kpd(makeKeymap(keys), rowPins, colPins, ROWS, COLS);
 
 /* --- Мультиплекс ------------------------------------------ */
 #define SR_CNT        8        // sr1..sr8
-#define DIGITS_TOTAL  42       // общее число разрядов
+#define DIGITS_TOTAL  39       // ИЗМЕНЕНО: было 42, стало 39 (3 индикатора по -1 разряду)
 #define DIGIT_US      1500UL   // микросекунды на один разряд
 #define BLINK_MS      1000UL
 #define DEBOUNCE_MS   200UL
 
-/* Паттерны сегментов (общий катод: 1=сегмент включен) */
-enum {D0,D1,D2,D3,D4,D5,D6,D7,D8,D9,D_MINUS,D_BLANK};
-// static const byte SEG_PAT[12] = {
-//   0b00111111, // 0
-//   0b00000110, // 1
-//   0b01011011, // 2
-//   0b01001111, // 3
-//   0b01100110, // 4
-//   0b01101101, // 5
-//   0b01111101, // 6
-//   0b00000111, // 7
-//   0b01111111, // 8
-//   0b01101111, // 9
-//   0b01000000, // -
-//   0b00000000  // blank
-// };
+/* Паттерны сегментов (общий АНОД: 0=сегмент включен) */
+enum {D0,D1,D2,D3,D4,D5,D6,D7,D8,D9,D_MINUS,D_BLANK,
+      // ДОБАВЛЕНО: Буквы для месяцев
+      D_A,D_b,D_C,D_d,D_E,D_F,D_G,D_H,D_J,D_L,D_n,D_o,D_P,D_r,D_S,D_t,D_U,D_y};
 
-// Паттерны сегментов (общий АНОД: 0=сегмент включен, инвертировано)
-static const byte SEG_PAT[12] = {
+static const byte SEG_PAT[] = {
+  // Цифры
   0b11000000, // 0
   0b11111001, // 1
   0b10100100, // 2
@@ -81,8 +69,43 @@ static const byte SEG_PAT[12] = {
   0b11111000, // 7
   0b10000000, // 8
   0b10010000, // 9
-  0b10111111, // -
-  0b11111111  // blank
+  0b10111111, // - (минус)
+  0b11111111, // blank (пусто)
+  // ДОБАВЛЕНО: Буквы (7-сегментные приближения)
+  0b10001000, // A
+  0b10000011, // b
+  0b11000110, // C
+  0b10100001, // d
+  0b10000110, // E
+  0b10001110, // F
+  0b11000010, // G
+  0b10001001, // H
+  0b11100001, // J
+  0b11000111, // L
+  0b10101011, // n
+  0b10100011, // o
+  0b10001100, // P
+  0b10101111, // r
+  0b10010010, // S
+  0b10000111, // t
+  0b11000001, // U
+  0b10010001, // y
+};
+
+/* ДОБАВЛЕНО: Таблица аббревиатур месяцев для 7-сегментного индикатора */
+const byte MONTH_LETTERS[12][3] = {
+  {D_J, D_A, D_n},  // JAN (январь)
+  {D_F, D_E, D_b},  // FEb (февраль)
+  {D_H, D_A, D_r},  // HAr (март, M сложно отобразить)
+  {D_A, D_P, D_r},  // APr (апрель)
+  {D_H, D_A, D_y},  // HAy (май, M→H)
+  {D_J, D_U, D_n},  // JUn (июнь)
+  {D_J, D_U, D_L},  // JUL (июль)
+  {D_A, D_U, D_G},  // AUG (август)
+  {D_S, D_E, D_P},  // SEP (сентябрь)
+  {D_o, D_C, D_t},  // oCt (октябрь)
+  {D_n, D_o, D_BLANK}, // no_ (ноябрь, V сложно)
+  {D_d, D_E, D_C},  // dEC (декабрь)
 };
 
 /* --- Время ------------------------------------------------- */
@@ -101,7 +124,7 @@ struct DateTime {
 DateTime destT, presT, lastT;
 
 /* --- Глобальные ------------------------------------------- */
-byte buf[DIGITS_TOTAL];      // 42 разряда, 0..41
+byte buf[DIGITS_TOTAL];      // ИЗМЕНЕНО: 39 разрядов (было 42)
 byte curDig = 0;
 unsigned long tDig=0, tBlink=0, tKey=0, tMin=0;
 bool blinkTick = false;
@@ -145,28 +168,35 @@ void to12h(int h24, int& h12out, bool& pm) {
   if(!h12out) h12out = 12;
 }
 
-/* Таблица соответствия каждому разряду (0..41) конкретного регистра и бита. */
+/* ИЗМЕНЕНО: Таблица соответствия разрядов (теперь 39 разрядов) */
+/* Destination: buf[0-12]  = 3(month) + 2(day) + 4(year) + 2(hour) + 2(min)
+   Present:     buf[13-25] = 3(month) + 2(day) + 4(year) + 2(hour) + 2(min)
+   Last:        buf[26-38] = 3(month) + 2(day) + 4(year) + 2(hour) + 2(min) */
 struct Sel { byte srIdx; byte bitMask; };
-// static const Sel SEL[DIGITS_TOTAL] PROGMEM = {
-//   {1,1<<0},{1,1<<1},{1,1<<2},{1,1<<3}, {1,1<<4},{1,1<<5},
-//   {1,1<<6},{1,1<<7},{2,1<<0},{2,1<<1}, {2,1<<2},{2,1<<3},
-//   {2,1<<4},{2,1<<5},{2,1<<6},{2,1<<7}, {3,1<<0},{3,1<<1},
-//   {3,1<<2},{3,1<<3},{3,1<<4},{3,1<<5}, {3,1<<6},{3,1<<7},
-//   {4,1<<0},{4,1<<1},{4,1<<2},{4,1<<3}, {4,1<<4},{4,1<<5},
-//   {4,1<<6},{4,1<<7},{5,1<<0},{5,1<<1}, {5,1<<2},{5,1<<3},
-//   {5,1<<4},{5,1<<5},{5,1<<6},{5,1<<7}, {6,1<<0},{6,1<<1},
-// };
 static const Sel SEL[DIGITS_TOTAL] PROGMEM = {
-  {0,1<<0},{0,1<<1},{0,1<<2},{0,1<<3}, {0,1<<4},{0,1<<5},
-  {0,1<<6},{0,1<<7},{1,1<<0},{1,1<<1}, {1,1<<2},{1,1<<3},
-  {1,1<<4},{1,1<<5},{1,1<<6},{1,1<<7}, {2,1<<0},{2,1<<1},
-  {2,1<<2},{2,1<<3},{2,1<<4},{2,1<<5}, {2,1<<6},{2,1<<7},
-  {3,1<<0},{3,1<<1},{3,1<<2},{3,1<<3}, {3,1<<4},{3,1<<5},
-  {3,1<<6},{3,1<<7},{4,1<<0},{4,1<<1}, {4,1<<2},{4,1<<3},
-  {4,1<<4},{4,1<<5},{4,1<<6},{4,1<<7}, {5,1<<0},{5,1<<1},
+  // Destination: 0-12
+  {0,1<<0},{0,1<<1},{0,1<<2},                    // sevseg1: 3 разряда (month)
+  {0,1<<3},{0,1<<4},                              // sevseg2: 2 разряда (day)
+  {0,1<<5},{0,1<<6},{1,1<<0},{1,1<<1},           // sevseg3: 4 разряда (year)
+  {1,1<<2},{1,1<<3},                              // sevseg4: 2 разряда (hour)
+  {1,1<<4},{1,1<<5},                              // sevseg5: 2 разряда (min)
+
+  // Present: 13-25
+  {1,1<<6},{1,1<<7},{2,1<<0},                    // sevseg6: 3 разряда (month)
+  {2,1<<1},{2,1<<2},                              // sevseg7: 2 разряда (day)
+  {2,1<<3},{2,1<<4},{2,1<<5},{2,1<<6},           // sevseg8: 4 разряда (year)
+  {2,1<<7},{3,1<<0},                              // sevseg9: 2 разряда (hour)
+  {3,1<<1},{3,1<<2},                              // sevseg10: 2 разряда (min)
+
+  // Last: 26-38
+  {3,1<<3},{3,1<<4},{3,1<<5},                    // sevseg11: 3 разряда (month)
+  {3,1<<6},{3,1<<7},                              // sevseg12: 2 разряда (day)
+  {4,1<<0},{4,1<<1},{4,1<<2},{4,1<<3},           // sevseg13: 4 разряда (year)
+  {4,1<<4},{4,1<<5},                              // sevseg14: 2 разряда (hour)
+  {4,1<<6},{4,1<<7},                              // sevseg15: 2 разряда (min)
 };
 
-/* Вывод 8 реесторов в 74HC595 */
+/* Вывод 8 регистров в 74HC595 */
 void latchAll(const byte* data) {
   digitalWrite(LATCH_PIN, LOW);
   for (int8_t i = SR_CNT-1; i >= 0; --i) {
@@ -175,20 +205,20 @@ void latchAll(const byte* data) {
   digitalWrite(LATCH_PIN, HIGH);
 }
 
-/* Показываем разряд idx - один из 42 */
+/* Показываем разряд idx - один из 39 */
 void showDigit(byte idx) {
   static const byte CLR[SR_CNT] = {0};
   byte sr[SR_CNT] = {0};
 
   // Сегменты - sr1 (0)
   byte sym = buf[idx];
-  if (sym > D_BLANK) sym = D_BLANK;
+  if (sym >= sizeof(SEG_PAT)) sym = D_BLANK; // ИЗМЕНЕНО: проверка размера массива
   sr[0] = SEG_PAT[sym];
 
   // COM - один активный бит в одном из sr2..sr7, по таблице
   Sel sel;
   memcpy_P(&sel, &SEL[idx], sizeof(Sel));
-  sr[ 1 + sel.srIdx ] = sel.bitMask;
+  sr[1 + sel.srIdx] = sel.bitMask;
 
   latchAll(sr);
   delayMicroseconds(DIGIT_US);
@@ -207,6 +237,17 @@ void put4(byte off, int value) {
   buf[off + 3] = value % 10;
 }
 
+/* ДОБАВЛЕНО: Функция для вывода 3 букв месяца */
+void putMonth(byte off, int month) {
+  if (month < 1 || month > 12) {
+    buf[off] = buf[off+1] = buf[off+2] = D_MINUS;
+    return;
+  }
+  buf[off]   = MONTH_LETTERS[month-1][0];
+  buf[off+1] = MONTH_LETTERS[month-1][1];
+  buf[off+2] = MONTH_LETTERS[month-1][2];
+}
+
 void fillDash(byte from, byte count) {
   for (byte i = 0; i < count; i++) buf[from + i] = D_MINUS;
 }
@@ -215,46 +256,46 @@ void fillBlank(byte from, byte count) {
   for (byte i = 0; i < count; i++) buf[from + i] = D_BLANK;
 }
 
-/* Буфер для Destination Time */
+/* ИЗМЕНЕНО: Буфер для Destination Time (теперь 13 разрядов: 0-12) */
 void toBufferDest(const DateTime& dt) {
   if (!dt.valid) {
-    fillDash(0, 14);
+    fillDash(0, 13); // ИЗМЕНЕНО: было 14, стало 13
     return;
   }
-  fillBlank(0, 2); put2(2, dt.m);
-  put2(4, dt.d);
-  put4(6, dt.y);
+  putMonth(0, dt.m);    // 3 разряда: буквы месяца
+  put2(3, dt.d);         // 2 разряда: день
+  put4(5, dt.y);         // 4 разряда: год
   int h12; bool pm; to12h(dt.h, h12, pm);
-  put2(10, h12);
-  put2(12, dt.min);
+  put2(9, h12);          // 2 разряда: час
+  put2(11, dt.min);      // 2 разряда: минута
 }
 
-/* Буфер для Present Time */
+/* ИЗМЕНЕНО: Буфер для Present Time (теперь 13 разрядов: 13-25) */
 void toBufferPres(const DateTime& dt) {
   if (!dt.valid) {
-    fillDash(14, 14);
+    fillDash(13, 13); // ИЗМЕНЕНО: было 14, стало 13
     return;
   }
-  fillBlank(14, 2); put2(16, dt.m);
-  put2(18, dt.d);
-  put4(20, dt.y);
+  putMonth(13, dt.m);    // 3 разряда: буквы месяца
+  put2(16, dt.d);        // 2 разряда: день
+  put4(18, dt.y);        // 4 разряда: год
   int h12; bool pm; to12h(dt.h, h12, pm);
-  put2(24, h12);
-  put2(26, dt.min);
+  put2(22, h12);         // 2 разряда: час
+  put2(24, dt.min);      // 2 разряда: минута
 }
 
-/* Буфер для Last Time (та же логика, другой диапазон) */
+/* ИЗМЕНЕНО: Буфер для Last Time (теперь 13 разрядов: 26-38) */
 void toBufferLast(const DateTime& dt) {
   if (!dt.valid) {
-    fillDash(28, 14);
+    fillDash(26, 13); // ИЗМЕНЕНО: было 14, стало 13
     return;
   }
-  fillBlank(28, 2); put2(30, dt.m);
-  put2(32, dt.d);
-  put4(34, dt.y);
+  putMonth(26, dt.m);    // 3 разряда: буквы месяца
+  put2(29, dt.d);        // 2 разряда: день
+  put4(31, dt.y);        // 4 разряда: год
   int h12; bool pm; to12h(dt.h, h12, pm);
-  put2(38, h12);
-  put2(40, dt.min);
+  put2(35, h12);         // 2 разряда: час
+  put2(37, dt.min);      // 2 разряда: минута
 }
 
 void refreshAll() {
@@ -287,8 +328,6 @@ void setLeds(const DateTime& dt, int pinAM, int pinPM, int pinS1, int pinS2, boo
 // Считывание температуры с NTC
 float getT() {
   int raw = analogRead(NTC_PIN);
-  // float voltage = raw * (5.0 / 1023.0);
-  // float tempC = (voltage - 2.5f) * 20.0f + 24.0f;  //приблизительно для Wokwi
   float tempC = 1 / (log(1 / (1023. / raw - 1)) / BETA_THERM + 1.0 / 298.15) - 273.15;
   return tempC;
 }
@@ -299,10 +338,6 @@ void setup() {
   pinMode(LATCH_PIN, OUTPUT);
   pinMode(CLOCK_PIN, OUTPUT);
 
-  // for (int p : {LED_AM_DEST, LED_PM_DEST, LED_SEC1_DEST, LED_SEC2_DEST,
-  //               LED_AM_PRES, LED_PM_PRES, LED_SEC1_PRES, LED_SEC2_PRES,
-  //               LED_AM_LAST, LED_PM_LAST, LED_SEC1_LAST, LED_SEC2_LAST}) pinMode(p, OUTPUT);
-
   const byte ledPins[] = {
     LED_AM_DEST, LED_PM_DEST, LED_SEC1_DEST, LED_SEC2_DEST,
     LED_AM_PRES, LED_PM_PRES, LED_SEC1_PRES, LED_SEC2_PRES,
@@ -311,7 +346,7 @@ void setup() {
   for (byte i = 0; i < sizeof(ledPins); i++) pinMode(ledPins[i], OUTPUT);
 
   refreshAll();
-  Serial.println(F("Time Circuits Ready. Press D/P/L to set time."));
+  Serial.println(F("Time Circuits Ready. Month letters on 7-seg. Press D/P/L to set time."));
 }
 
 void loop() {
@@ -440,7 +475,7 @@ void loop() {
   if (mode == SET_DEST) {
     destT = dt;
     Serial.print(F("\r\nThe destination date has been set: "));
-  } 
+  }
   else if (mode == SET_PRES) {
     presT = dt;
     tMin = ms;
@@ -454,5 +489,4 @@ void loop() {
   refreshAll();
   mode = NONE;
   Serial.println(dt.toText());
-  // Serial.println(F("\nOK"));
 }
