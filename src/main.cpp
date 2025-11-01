@@ -97,6 +97,8 @@ String inDigits;
 
 char lastKeyPressed = '\0';
 
+const float BETA_THERM = 3950;
+
 /* --- Утилиты ---------------------------------------------- */
 bool isLeap(int y) {
   return (y%4==0 && y%100!=0) || (y%400==0);
@@ -260,8 +262,9 @@ void setLeds(const DateTime& dt, int pinAM, int pinPM, int pinS1, int pinS2, boo
 // Считывание температуры с NTC
 float getT() {
   int raw = analogRead(NTC_PIN);
-  float voltage = raw * (5.0 / 1023.0);
-  float tempC = (voltage - 2.5f) * 20.0f + 24.0f;  //приблизительно для Wokwi
+  // float voltage = raw * (5.0 / 1023.0);
+  // float tempC = (voltage - 2.5f) * 20.0f + 24.0f;  //приблизительно для Wokwi
+  float tempC = 1 / (log(1 / (1023. / raw - 1)) / BETA_THERM + 1.0 / 298.15) - 273.15;
   return tempC;
 }
 
@@ -317,7 +320,7 @@ void loop() {
   }
 
   float tC = getT();
-  if (tC >= 34.0 && !jumpLock && destT.valid && presT.valid) {
+  if (tC >= 58.0 && !jumpLock && destT.valid && presT.valid) {
     lastT = presT;
     presT = destT;
     tMin = ms;
@@ -359,12 +362,25 @@ void loop() {
       Serial.print(F("Enter Last Time Departed: "));
       return;
     }
+    if (k == '#') {
+      inDigits = "";
+      Serial.print(F("Temp:"));
+      Serial.println(tC);
+      return;
+    }
     return;
   }
 
   if (k >= '0' && k <= '9' && inDigits.length() < 12) {
     inDigits += k;
     Serial.print(k);
+    return;
+  }
+
+  if (k == '#') {
+    inDigits = "";
+    Serial.println(F("\nOut"));
+    mode = NONE;
     return;
   }
 
